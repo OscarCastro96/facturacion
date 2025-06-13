@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Factura Digital</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      color: #333;
+    }
+
+    .invoice-container {
+      max-width: 800px;
+      margin: auto;
+      border: 1px solid #ccc;
+      padding: 20px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      width: 150px;
+      height: 50px;
+      background-color: #eee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 18px;
+      color: #999;
+    }
+
+    h2 {
+      margin-top: 20px;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .row label {
+      flex: 1 0 45%;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 5px;
+      margin-top: 3px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+
+    th, td {
+      padding: 8px;
+      text-align: left;
+    }
+
+    #totales {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 300px;
+    }
+
+    #totales label {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    #botones {
+      margin-top: 30px;
+      display: flex;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="invoice-container">
+    <div class="header">
+      <div class="logo">LOGO</div>
+      <h1>Factura</h1>
+    </div>
+
+    <div class="row">
+      <label>Número de Factura:<br><input type="text" id="numFactura"></label>
+      <label>De:<br><input type="text" id="de"></label>
+      <label>Cobrará:<br><input type="text" id="cobra"></label>
+      <label>Enviar a (Email):<br><input type="email" id="correo"></label>
+      <label>Fecha de generación:<br><input type="date" id="fechaGen"></label>
+      <label>Fecha de vencimiento:<br><input type="date" id="fechaVenc"></label>
+      <label style="flex: 1 0 100%;">Condiciones de pago:<br><textarea id="condiciones"></textarea></label>
+    </div>
+
+    <h2>Artículos</h2>
+    <table id="tablaArticulos">
+      <thead>
+        <tr><th>Artículo</th><th>Cantidad</th><th>Precio</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <button id="addRow">Añadir Artículo</button>
+
+    <h2>Notas y Términos</h2>
+    <div class="row">
+      <label style="flex: 1 0 100%;">Notas:<br><textarea id="notas"></textarea></label>
+      <label style="flex: 1 0 100%;">Términos:<br><textarea id="terminos"></textarea></label>
+    </div>
+
+    <div id="totales">
+      <label>Impuesto %: <input type="number" id="impuesto" oninput="calcularTotal()"></label>
+      <label>Descuento %: <input type="number" id="descuento" oninput="calcularTotal()"></label>
+      <label>Total (Bs): <span id="total">0.00 Bs</span></label>
+    </div>
+
+    <div id="botones">
+      <button onclick="guardarPDF()">Guardar como PDF</button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    document.getElementById("addRow").addEventListener("click", function() {
+      const tbody = document.getElementById("tablaArticulos").querySelector("tbody");
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td><input type="text"></td>
+        <td><input type="number" oninput="calcularTotal()"></td>
+        <td><input type="number" oninput="calcularTotal()"></td>
+      `;
+      tbody.appendChild(row);
+    });
+
+    function calcularTotal() {
+      const rows = document.querySelectorAll("#tablaArticulos tbody tr");
+      let subtotal = 0;
+      rows.forEach(row => {
+        const cantidad = parseFloat(row.cells[1].querySelector("input").value) || 0;
+        const precio = parseFloat(row.cells[2].querySelector("input").value) || 0;
+        subtotal += cantidad * precio;
+      });
+
+      const impuesto = parseFloat(document.getElementById("impuesto").value) || 0;
+      const descuento = parseFloat(document.getElementById("descuento").value) || 0;
+      const total = subtotal + (subtotal * impuesto / 100) - (subtotal * descuento / 100);
+      document.getElementById("total").innerText = total.toFixed(2) + " Bs";
+    }
+
+    function guardarPDF() {
+      const data = {
+          numero_factura: document.getElementById('numFactura').value,
+          de: document.getElementById('de').value,
+          cobrara: document.getElementById('cobra').value,
+          correo: document.getElementById('correo').value,
+          fecha_generacion: document.getElementById('fechaGen').value,
+          fecha_vencimiento: document.getElementById('fechaVenc').value,
+          condiciones_pago: document.getElementById('condiciones').value,
+          notas: document.getElementById('notas').value,
+          terminos: document.getElementById('terminos').value,
+          impuesto: document.getElementById('impuesto').value,
+          descuento: document.getElementById('descuento').value,
+          total: document.getElementById('total').innerText
+      };
+
+      fetch('/guardar_pdf', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+      }).then(res => res.json())
+      .then(response => alert(response.message))
+      .catch(error => console.error('Error:', error));
+    }
+  </script>
+</body>
+</html>
