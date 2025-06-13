@@ -109,7 +109,7 @@
     </div>
 
     <h2>Artículos</h2>
-    <table id="tablaArticulos">
+    <table id="tabla_articulos">
       <thead>
         <tr><th>Artículo</th><th>Cantidad</th><th>Precio</th></tr>
       </thead>
@@ -130,14 +130,14 @@
     </div>
 
     <div id="botones">
-      <button onclick="guardarPDF()">Guardar como PDF</button>
+      <button id="guardarPDF" onclick="guardarPDF()">Guardar como PDF</button>
     </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     document.getElementById("addRow").addEventListener("click", function() {
-      const tbody = document.getElementById("tablaArticulos").querySelector("tbody");
+      const tbody = document.getElementById("tabla_articulos").querySelector("tbody");
       const row = document.createElement("tr");
       row.innerHTML = `
         <td><input type="text"></td>
@@ -148,7 +148,7 @@
     });
 
     function calcularTotal() {
-      const rows = document.querySelectorAll("#tablaArticulos tbody tr");
+      const rows = document.querySelectorAll("#tabla_articulos tbody tr");
       let subtotal = 0;
       rows.forEach(row => {
         const cantidad = parseFloat(row.cells[1].querySelector("input").value) || 0;
@@ -163,30 +163,45 @@
     }
 
     function guardarPDF() {
+      const rows = document.querySelectorAll("#tabla_articulos tbody tr");
+      const articulos = [];
+
+      rows.forEach(row => {
+        const articulo = row.cells[0].querySelector("input").value;
+        const cantidad = row.cells[1].querySelector("input").value;
+        const precio = row.cells[2].querySelector("input").value;
+        articulos.push({ articulo, cantidad, precio });
+      });
+
       const data = {
-          numero_factura: document.getElementById('numFactura').value,
-          de: document.getElementById('de').value,
-          cobrara: document.getElementById('cobra').value,
-          correo: document.getElementById('correo').value,
-          fecha_generacion: document.getElementById('fechaGen').value,
-          fecha_vencimiento: document.getElementById('fechaVenc').value,
-          condiciones_pago: document.getElementById('condiciones').value,
-          notas: document.getElementById('notas').value,
-          terminos: document.getElementById('terminos').value,
-          impuesto: document.getElementById('impuesto').value,
-          descuento: document.getElementById('descuento').value,
-          total: document.getElementById('total').innerText
+        numero_factura: document.getElementById('numFactura').value,
+        de: document.getElementById('de').value,
+        cobrara: document.getElementById('cobra').value,
+        correo: document.getElementById('correo').value,
+        fecha_generacion: document.getElementById('fechaGen').value,
+        fecha_vencimiento: document.getElementById('fechaVenc').value,
+        condiciones_pago: document.getElementById('condiciones').value,
+        notas: document.getElementById('notas').value,
+        terminos: document.getElementById('terminos').value,
+        impuesto: document.getElementById('impuesto').value,
+        descuento: document.getElementById('descuento').value,
+        total: document.getElementById('total').innerText,
+        articulos: articulos  // <-- Añadir artículos aquí
       };
 
-      fetch('/guardar_pdf', {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(data)
-      }).then(res => res.json())
-      .then(response => alert(response.message))
-      .catch(error => console.error('Error:', error));
+      fetch('http://127.0.0.1:5000/guardar_pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+        .then(res => res.json())
+        .then(response => alert(response.message))
+        .catch(error => {
+          console.error('Error:', error);
+          alert("Hubo un error al guardar la factura.");
+        });
     }
   </script>
 </body>
